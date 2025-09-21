@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en" class="">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SRT Gap Remover</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #F8F8F8;
+            --text-color: #1a1a1a;
+            --border-color: #1a1a1a;
+            --accent-color: #3d3d3d;
+            --accent-glow: rgba(61, 61, 61, 0.5);
+            --button-bg: #e0e0e0;
+            --button-hover-bg: #cccccc;
+            --input-bg: #ffffff;
+            --card-bg: #efefef;
+        }
+
+        html.dark {
+            --bg-color: #0d0d0d;
+            --text-color: #00ff41;
+            --border-color: #00ff41;
+            --accent-color: #00ff41;
+            --accent-glow: rgba(0, 255, 65, 0.3);
+            --button-bg: #1a1a1a;
+            --button-hover-bg: #2a2a2a;
+            --input-bg: #111;
+            --card-bg: #141414;
+        }
+
+        body {
+            font-family: 'VT323', monospace;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: background-color 0.3s ease, color 0.3s ease;
+            text-shadow: 0 0 2px var(--accent-glow);
+        }
+
+        .ascii-border {
+            border: 2px solid var(--border-color);
+            box-shadow: 0 0 8px var(--accent-glow), inset 0 0 8px var(--accent-glow);
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .ascii-button {
+            border: 2px solid var(--border-color);
+            background-color: var(--button-bg);
+            color: var(--text-color);
+            transition: all 0.2s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .ascii-button:hover {
+            transform: translate(-2px, -2px);
+            box-shadow: 2px 2px 0 0 var(--border-color);
+            background-color: var(--button-hover-bg);
+        }
+        
+        .ascii-button:active {
+            transform: translate(0, 0);
+            box-shadow: none;
+        }
+
+        #theme-toggle .sun-icon, #theme-toggle.dark .moon-icon { display: none; }
+        #theme-toggle.dark .sun-icon, #theme-toggle .moon-icon { display: block; }
+        
+        .title-cursor::after {
+            content: '_';
+            animation: blink 1s step-end infinite;
+        }
+
+        @keyframes blink {
+            50% { opacity: 0; }
+        }
+
+        .scanline::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to bottom, rgba(255,255,255,0.05) 50%, rgba(0,0,0,0.05) 50%);
+            background-size: 100% 4px;
+            z-index: 1;
+            pointer-events: none;
+            animation: scan 120s linear infinite;
+        }
+        
+        @keyframes scan {
+            from { background-position-y: 0; }
+            to { background-position-y: 100vh; }
+        }
+        
+        .result-card {
+            opacity: 0;
+            transform: translateY(20px);
+            animation: fadeIn 0.5s forwards;
+        }
+
+        @keyframes fadeIn {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4 sm:p-6 md:p-8 overflow-x-hidden scanline">
+
+    <div id="app" class="max-w-4xl mx-auto">
+        <!-- Header -->
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-3xl sm:text-4xl md:text-5xl tracking-widest title-cursor">[SRT_GAP_REMOVER]</h1>
+            <button id="theme-toggle" class="ascii-button p-2 text-2xl">
+                 <svg class="w-6 h-6 moon-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
+                 <svg class="w-6 h-6 sun-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+            </button>
+        </header>
+
+        <main>
+            <!-- File Drop Zone -->
+            <div id="drop-zone" class="ascii-border p-8 sm:p-12 text-center cursor-pointer mb-8 transition-all duration-300">
+                <p class="text-xl mb-4">DRAG & DROP .SRT FILES HERE</p>
+                <p class="mb-4">...or click to select files...</p>
+                <input type="file" id="file-input" class="hidden" multiple accept=".srt">
+                <div id="file-list" class="mt-4 text-sm"></div>
+            </div>
+
+            <!-- Controls -->
+            <div class="ascii-border p-6 mb-8">
+                 <label for="threshold" class="text-lg block mb-2">MAX GAP TO MERGE (SECONDS):</label>
+                 <div class="flex items-center space-x-4">
+                     <input type="range" id="threshold-slider" min="0.1" max="5" step="0.1" value="2" class="w-full h-2 rounded-lg appearance-none cursor-pointer" style="background: var(--button-bg); border: 1px solid var(--border-color);">
+                     <input type="number" id="threshold-number" min="0.1" max="5" step="0.1" value="2" class="w-24 p-2 text-center ascii-border" style="background-color: var(--input-bg);">
+                 </div>
+            </div>
+
+            <!-- Results -->
+            <div id="results-container">
+                <h2 id="results-title" class="text-2xl tracking-widest mb-4 hidden">>> PROCESSED_FILES</h2>
+                <div id="results" class="space-y-4">
+                    <!-- Processed file cards will be injected here -->
+                </div>
+            </div>
+        </main>
+        
+        <!-- Footer -->
+        <footer class="text-center mt-12 pt-4 border-t-2 border-dashed" style="border-color: var(--border-color);">
+            <p>Made by Navaneeth Sankar K P</p>
+            <a href="https://github.com/navuxneeth" target="_blank" rel="noopener noreferrer" class="hover:underline" style="color: var(--accent-color);">[GitHub Profile]</a>
+        </footer>
+    </div>
+
+    <script>
+        const themeToggle = document.getElementById('theme-toggle');
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        const fileList = document.getElementById('file-list');
+        const thresholdSlider = document.getElementById('threshold-slider');
+        const thresholdNumber = document.getElementById('threshold-number');
+        const resultsContainer = document.getElementById('results');
+        const resultsTitle = document.getElementById('results-title');
+        let loadedFiles = [];
+
+        // --- THEME ---
+        const applyTheme = (theme) => {
+            if (theme === 'dark') {
+                document.documentElement.classList.add('dark');
+                themeToggle.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+                themeToggle.classList.remove('dark');
+            }
+        };
+
+        themeToggle.addEventListener('click', () => {
+            const isDark = document.documentElement.classList.toggle('dark');
+            themeToggle.classList.toggle('dark');
+            localStorage.setItem('srt_theme', isDark ? 'dark' : 'light');
+        });
+
+        // Load saved theme
+        const savedTheme = localStorage.getItem('srt_theme') || 'dark'; // Default to dark
+        applyTheme(savedTheme);
+
+
+        // --- FILE HANDLING ---
+        dropZone.addEventListener('click', () => fileInput.click());
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.style.borderColor = 'var(--accent-color)';
+            dropZone.style.boxShadow = '0 0 12px var(--accent-glow)';
+        });
+        dropZone.addEventListener('dragleave', () => {
+             dropZone.style.borderColor = 'var(--border-color)';
+             dropZone.style.boxShadow = '0 0 8px var(--accent-glow), inset 0 0 8px var(--accent-glow)';
+        });
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.style.borderColor = 'var(--border-color)';
+            dropZone.style.boxShadow = '0 0 8px var(--accent-glow), inset 0 0 8px var(--accent-glow)';
+            if (e.dataTransfer.files.length) {
+                fileInput.files = e.dataTransfer.files;
+                handleFiles(fileInput.files);
+            }
+        });
+        fileInput.addEventListener('change', () => handleFiles(fileInput.files));
+        
+        function handleFiles(files) {
+            loadedFiles = Array.from(files).filter(file => file.name.endsWith('.srt'));
+            fileList.innerHTML = loadedFiles.length > 0 ? `Selected: ${loadedFiles.map(f => f.name).join(', ')}` : 'No .srt files selected.';
+            processFiles();
+        }
+
+        // --- CONTROLS ---
+        thresholdSlider.addEventListener('input', () => {
+            thresholdNumber.value = thresholdSlider.value;
+            if (loadedFiles.length > 0) processFiles();
+        });
+        thresholdNumber.addEventListener('input', () => {
+            thresholdSlider.value = thresholdNumber.value;
+            if (loadedFiles.length > 0) processFiles();
+        });
+
+
+        // --- SRT PROCESSING LOGIC ---
+        const timeToMs = (timeStr) => {
+            const [hms, ms] = timeStr.split(',');
+            const [h, m, s] = hms.split(':').map(Number);
+            return (h * 3600 + m * 60 + s) * 1000 + Number(ms);
+        };
+
+        const msToTime = (ms) => {
+            const totalSeconds = Math.floor(ms / 1000);
+            const hours = Math.floor(totalSeconds / 3600).toString().padStart(2, '0');
+            const minutes = Math.floor((totalSeconds % 3600) / 60).toString().padStart(2, '0');
+            const seconds = (totalSeconds % 60).toString().padStart(2, '0');
+            const milliseconds = (ms % 1000).toString().padStart(3, '0');
+            return `${hours}:${minutes}:${seconds},${milliseconds}`;
+        };
+
+        const processSrt = (content, thresholdMs) => {
+            const blocks = content.trim().split(/\r?\n\r?\n/);
+            let changes = 0;
+            const subtitleObjects = blocks.map(block => {
+                const lines = block.split(/\r?\n/);
+                if (lines.length < 2) return null;
+                const timeLine = lines[1];
+                const timeMatch = timeLine.match(/(\d{2}:\d{2}:\d{2},\d{3})\s-->\s(\d{2}:\d{2}:\d{2},\d{3})/);
+                if (!timeMatch) return null;
+
+                return {
+                    index: lines[0],
+                    startTime: timeMatch[1],
+                    endTime: timeMatch[2],
+                    startTimeMs: timeToMs(timeMatch[1]),
+                    endTimeMs: timeToMs(timeMatch[2]),
+                    text: lines.slice(2).join('\n')
+                };
+            }).filter(Boolean);
+
+            for (let i = 1; i < subtitleObjects.length; i++) {
+                const prev = subtitleObjects[i-1];
+                const curr = subtitleObjects[i];
+
+                const gap = curr.startTimeMs - prev.endTimeMs;
+                if (gap > 0 && gap <= thresholdMs) {
+                    const newStartTimeMs = prev.endTimeMs + 1;
+                    if (newStartTimeMs < curr.endTimeMs) { // Ensure duration doesn't become negative
+                        curr.startTimeMs = newStartTimeMs;
+                        curr.startTime = msToTime(newStartTimeMs);
+                        changes++;
+                    }
+                }
+            }
+
+            const newSrtContent = subtitleObjects.map(sub => 
+                `${sub.index}\n${sub.startTime} --> ${sub.endTime}\n${sub.text}`
+            ).join('\n\n');
+
+            return { newSrtContent, changes };
+        };
+
+        const processFiles = () => {
+            if (loadedFiles.length === 0) return;
+            
+            resultsContainer.innerHTML = '';
+            resultsTitle.classList.remove('hidden');
+            const thresholdMs = parseFloat(thresholdNumber.value) * 1000;
+
+            loadedFiles.forEach(file => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const { newSrtContent, changes } = processSrt(e.target.result, thresholdMs);
+                    createResultCard(file.name, newSrtContent, changes);
+                };
+                reader.readAsText(file);
+            });
+        };
+
+        const createResultCard = (fileName, content, changes) => {
+            const card = document.createElement('div');
+            card.className = 'result-card ascii-border p-4 flex flex-col sm:flex-row justify-between items-center space-y-2 sm:space-y-0';
+            card.style.backgroundColor = 'var(--card-bg)';
+
+            const info = document.createElement('div');
+            info.innerHTML = `<p class="font-bold">${fileName}</p><p class="text-sm">${changes} gap(s) merged.</p>`;
+            
+            const downloadBtn = document.createElement('button');
+            downloadBtn.textContent = 'DOWNLOAD';
+            downloadBtn.className = 'ascii-button px-4 py-2 w-full sm:w-auto';
+            downloadBtn.onclick = () => {
+                const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = fileName.replace('.srt', '_merged.srt');
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            };
+
+            card.appendChild(info);
+            card.appendChild(downloadBtn);
+            resultsContainer.appendChild(card);
+        };
+    </script>
+</body>
+</html>
