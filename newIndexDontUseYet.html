@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ungap_SRT</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn/tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
@@ -39,6 +39,21 @@
             color: var(--text-color);
             transition: background-color 0.3s ease, color 0.3s ease;
             text-shadow: 0 0 2px var(--accent-glow);
+        }
+        
+        /* Full-screen scanline effect */
+        body::after {
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: linear-gradient(to bottom, rgba(255,255,255,0.05) 50%, rgba(0,0,0,0.05) 50%);
+            background-size: 100% 4px;
+            z-index: 9999;
+            pointer-events: none;
+            animation: scan 120s linear infinite;
         }
 
         .ascii-border {
@@ -78,20 +93,6 @@
         @keyframes blink {
             50% { opacity: 0; }
         }
-
-        .scanline::before {
-            content: "";
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(to bottom, rgba(255,255,255,0.05) 50%, rgba(0,0,0,0.05) 50%);
-            background-size: 100% 4px;
-            z-index: 1;
-            pointer-events: none;
-            animation: scan 120s linear infinite;
-        }
         
         @keyframes scan {
             from { background-position-y: 0; }
@@ -112,33 +113,42 @@
         }
     </style>
 </head>
-<body class="min-h-screen p-4 sm:p-6 md:p-8 overflow-x-hidden scanline">
+<body class="min-h-screen p-4 sm:p-6 md:p-8 overflow-x-hidden">
 
     <div id="app" class="max-w-4xl mx-auto">
         <!-- Header -->
-        <header class="flex justify-between items-center mb-8">
+        <header class="flex justify-between items-center mb-2">
             <h1 class="text-3xl sm:text-4xl md:text-5xl tracking-widest title-cursor">[Ungap_SRT]</h1>
             <button id="theme-toggle" class="ascii-button p-2 text-2xl">
                  <svg class="w-6 h-6 moon-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
                  <svg class="w-6 h-6 sun-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
             </button>
         </header>
-        <p class="text-lg mb-8">A simple tool to remove small, awkward gaps between subtitle lines.</p>
+        <p class="text-lg mb-8">A simple, browser-based tool to automatically remove small, awkward gaps between subtitle lines in .srt files.</p>
 
 
         <main>
             <!-- File Drop Zone -->
-            <div id="drop-zone" class="ascii-border p-8 sm:p-12 text-center cursor-pointer mb-8 transition-all duration-300">
-                <p class="text-xl mb-4">DRAG & DROP .SRT FILES HERE</p>
-                <p class="mb-4">...or click to select files...</p>
+            <div id="drop-zone" class="ascii-border p-8 sm:p-12 text-center mb-8 transition-all duration-300">
+                <div id="drop-zone-content" class="flex flex-col sm:flex-row justify-between items-center">
+                    <div class="text-left sm:text-center flex-grow">
+                         <p id="drop-zone-title" class="text-xl mb-4">DRAG & DROP .SRT FILES HERE</p>
+                         <p id="drop-zone-subtitle" class="mb-4">...or click to select files...</p>
+                         <div id="file-list" class="mt-4 text-sm"></div>
+                    </div>
+                    <button id="process-btn" class="ascii-button px-6 py-2 mt-4 sm:mt-0 sm:ml-4 hidden">PROCESS</button>
+                    <button id="refresh-btn" class="ascii-button px-6 py-2 mt-4 sm:mt-0 sm:ml-4 hidden">REFRESH</button>
+                </div>
                 <input type="file" id="file-input" class="hidden" multiple accept=".srt">
-                <div id="file-list" class="mt-4 text-sm"></div>
             </div>
 
             <!-- Controls -->
-            <div class="ascii-border p-6 mb-8">
-                 <label for="threshold" class="text-lg block mb-2">MAX GAP TO MERGE (SECONDS):</label>
-                 <div class="flex items-center space-x-4">
+            <div id="controls-section" class="ascii-border p-6 mb-8">
+                 <div class="flex justify-between items-center">
+                    <label id="threshold-label" for="threshold" class="text-lg block mb-2">MAX GAP TO MERGE (SECONDS):</label>
+                    <button id="redo-btn" class="ascii-button px-6 py-2 hidden">REDO</button>
+                 </div>
+                 <div class="flex items-center space-x-4 mt-2">
                      <input type="range" id="threshold-slider" min="0.1" max="5" step="0.1" value="2" class="w-full h-2 rounded-lg appearance-none cursor-pointer" style="background: var(--button-bg); border: 1px solid var(--border-color);">
                      <input type="number" id="threshold-number" min="0.1" max="5" step="0.1" value="2" class="w-24 p-2 text-center ascii-border" style="background-color: var(--input-bg);">
                  </div>
@@ -156,21 +166,31 @@
         <!-- Footer -->
         <footer class="text-center mt-12 pt-4 border-t-2 border-dashed" style="border-color: var(--border-color);">
             <p>Made by Navaneeth Sankar K P</p>
+             <p class="text-sm mt-1">100% local processing, no data collected &lt;3</p>
             <a href="https://github.com/navuxneeth" target="_blank" rel="noopener noreferrer" class="hover:underline" style="color: var(--accent-color);">[GitHub Profile]</a>
-            <br>
-             <p class="text-sm mt-1">100% local processing, no data collected :)</p>
         </footer>
     </div>
 
     <script>
         const themeToggle = document.getElementById('theme-toggle');
         const dropZone = document.getElementById('drop-zone');
+        const dropZoneContent = document.getElementById('drop-zone-content');
+        const dropZoneTitle = document.getElementById('drop-zone-title');
+        const dropZoneSubtitle = document.getElementById('drop-zone-subtitle');
         const fileInput = document.getElementById('file-input');
         const fileList = document.getElementById('file-list');
+        const processBtn = document.getElementById('process-btn');
+        const refreshBtn = document.getElementById('refresh-btn');
+        
+        const controlsSection = document.getElementById('controls-section');
+        const thresholdLabel = document.getElementById('threshold-label');
+        const redoBtn = document.getElementById('redo-btn');
         const thresholdSlider = document.getElementById('threshold-slider');
         const thresholdNumber = document.getElementById('threshold-number');
+        
         const resultsContainer = document.getElementById('results');
         const resultsTitle = document.getElementById('results-title');
+        
         let loadedFiles = [];
 
         // --- THEME ---
@@ -190,22 +210,16 @@
             localStorage.setItem('srt_theme', isDark ? 'dark' : 'light');
         });
 
-        // Load saved theme, default to light
         const savedTheme = localStorage.getItem('srt_theme') || 'light'; 
         applyTheme(savedTheme);
 
 
-        // --- FILE HANDLING ---
+        // --- UI WORKFLOW ---
         dropZone.addEventListener('click', () => fileInput.click());
-        dropZone.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            dropZone.style.borderColor = 'var(--accent-color)';
-            dropZone.style.boxShadow = '0 0 12px var(--accent-glow)';
-        });
-        dropZone.addEventListener('dragleave', () => {
-             dropZone.style.borderColor = 'var(--border-color)';
-             dropZone.style.boxShadow = '0 0 8px var(--accent-glow), inset 0 0 8px var(--accent-glow)';
-        });
+        fileInput.addEventListener('change', () => handleFiles(fileInput.files));
+        
+        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.style.borderColor = 'var(--accent-color)'; dropZone.style.boxShadow = '0 0 12px var(--accent-glow)'; });
+        dropZone.addEventListener('dragleave', () => { dropZone.style.borderColor = 'var(--border-color)'; dropZone.style.boxShadow = '0 0 8px var(--accent-glow), inset 0 0 8px var(--accent-glow)'; });
         dropZone.addEventListener('drop', (e) => {
             e.preventDefault();
             dropZone.style.borderColor = 'var(--border-color)';
@@ -215,23 +229,36 @@
                 handleFiles(fileInput.files);
             }
         });
-        fileInput.addEventListener('change', () => handleFiles(fileInput.files));
-        
+
         function handleFiles(files) {
             loadedFiles = Array.from(files).filter(file => file.name.endsWith('.srt'));
-            fileList.innerHTML = loadedFiles.length > 0 ? `Selected: ${loadedFiles.map(f => f.name).join(', ')}` : 'No .srt files selected.';
-            processFiles();
+            if (loadedFiles.length > 0) {
+                fileList.innerHTML = `Selected: ${loadedFiles.map(f => f.name).join(', ')}`;
+                processBtn.classList.remove('hidden');
+                dropZone.style.cursor = 'default';
+                dropZone.onclick = null; // Disable click after selection
+            } else {
+                 fileList.innerHTML = 'No .srt files selected.';
+            }
         }
 
-        // --- CONTROLS ---
-        thresholdSlider.addEventListener('input', () => {
-            thresholdNumber.value = thresholdSlider.value;
-            if (loadedFiles.length > 0) processFiles();
+        processBtn.addEventListener('click', () => {
+            processFiles();
+            dropZoneTitle.textContent = 'Thank You :)';
+            dropZoneSubtitle.classList.add('hidden');
+            fileList.classList.add('hidden');
+            processBtn.classList.add('hidden');
+            refreshBtn.classList.remove('hidden');
+            thresholdLabel.textContent = 'CHANGE GAP?';
+            redoBtn.classList.remove('hidden');
         });
-        thresholdNumber.addEventListener('input', () => {
-            thresholdSlider.value = thresholdNumber.value;
-            if (loadedFiles.length > 0) processFiles();
-        });
+        
+        redoBtn.addEventListener('click', processFiles);
+
+        refreshBtn.addEventListener('click', () => location.reload());
+
+        thresholdSlider.addEventListener('input', () => { thresholdNumber.value = thresholdSlider.value; });
+        thresholdNumber.addEventListener('input', () => { thresholdSlider.value = thresholdNumber.value; });
 
 
         // --- SRT PROCESSING LOGIC ---
@@ -316,7 +343,7 @@
             card.className = 'result-card ascii-border p-4 flex flex-col sm:flex-row justify-between items-center space-y-2 sm:space-y-0';
             card.style.backgroundColor = 'var(--card-bg)';
 
-            const avgGap = changes > 0 ? (totalGapMs / changes / 1000).toFixed(2) : 0;
+            const avgGap = changes > 0 ? (totalGapMs / changes / 1000).toFixed(5) : 0;
 
             const info = document.createElement('div');
             info.innerHTML = `<p class="font-bold">${fileName}</p><p class="text-sm">${changes} gap(s) merged.</p><p class="text-sm">Avg. merged gap: ${avgGap}s</p>`;
