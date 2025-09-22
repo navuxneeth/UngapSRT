@@ -1,6 +1,6 @@
 # UngapSRT
 
-Tired of awkward silences in your subtitles? This tool zaps those tiny, annoying gaps between subtitle lines, making your viewing experience smooth like butter. All wrapped up in a funky, retro ASCII-themed interface as always :)
+Tired of awkward silences in your subtitles? This tool zaps those tiny, annoying gaps between subtitle lines, making your viewing experience smooth like butter. Retro ASCII-themed interface as always :)
 
 <img width="1603" height="865" alt="image" src="https://github.com/user-attachments/assets/de4e06a0-139f-437d-a682-166033ce1455" />
 
@@ -13,7 +13,7 @@ Tired of awkward silences in your subtitles? This tool zaps those tiny, annoying
 
 * **Batch Processing**: Drag and drop multiple `.srt` files at once.
 
-* **Purely Client-Side**: No server needed! All the processing happens securely in your browser using vanilla JavaScript.
+* **Purely Client-Side**: No server needed. All the processing happens securely in your browser using vanilla JavaScript.
 
 * **Groovy ASCII Theme**: A fun, retro terminal aesthetic with both light and dark modes.
 
@@ -31,7 +31,7 @@ It's as simple as it gets. No build process required.
 
 4. Adjust the "MAX GAP TO MERGE" slider to your preference.
 
-5. Click the "DOWNLOAD" button for each processed file. Voilà!
+5. Click the "DOWNLOAD" button for each processed file.
 
 ## Code Deep Dive
 
