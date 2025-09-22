@@ -35,7 +35,7 @@ It's as simple as it gets. No build process required.
 
 ## Code Deep Dive
 
-### 1. High-Level Project Overview
+### High-Level Project Overview
 
 `SRT_GAP_REMOVER` is a lightweight, single-page web application built with vanilla **HTML, CSS, and JavaScript**. There are no frameworks, no dependencies, and no backend. This makes it incredibly fast, portable, and secure, as all file processing is handled directly in the user's browser.
 
@@ -48,7 +48,7 @@ The application is contained entirely within a single `index.html` file, which i
 * **JavaScript (`<script>` block)**: Contains all the logic for file handling, SRT parsing, and DOM manipulation.
 
 <details>
-<summary>### 2. The Magic Inside &lt;script&gt;</summary>
+<summary>[The Magic Inside]</summary>
 
 The core logic of the application resides in the JavaScript. Here's how it works:
 
