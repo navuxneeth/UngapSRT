@@ -2,6 +2,9 @@
 
 Tired of awkward silences in your subtitles? This tool zaps those tiny, annoying gaps between subtitle lines, making your viewing experience smooth like butter. All wrapped up in a funky, retro ASCII-themed interface as always :)
 
+<img width="1603" height="865" alt="image" src="https://github.com/user-attachments/assets/de4e06a0-139f-437d-a682-166033ce1455" />
+
+
 ## Features
 
 * **Automatic Gap Removal**: Intelligently merges subtitle timings to remove gaps smaller than a specified threshold.
