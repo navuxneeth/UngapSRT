@@ -186,8 +186,8 @@
             localStorage.setItem('srt_theme', isDark ? 'dark' : 'light');
         });
 
-        // Load saved theme
-        const savedTheme = localStorage.getItem('srt_theme') || 'dark'; // Default to dark
+        // Load saved theme, default to light
+        const savedTheme = localStorage.getItem('srt_theme') || 'light'; 
         applyTheme(savedTheme);
 
 
@@ -249,6 +249,7 @@
         const processSrt = (content, thresholdMs) => {
             const blocks = content.trim().split(/\r?\n\r?\n/);
             let changes = 0;
+            let totalGapMs = 0;
             const subtitleObjects = blocks.map(block => {
                 const lines = block.split(/\r?\n/);
                 if (lines.length < 2) return null;
@@ -277,6 +278,7 @@
                         curr.startTimeMs = newStartTimeMs;
                         curr.startTime = msToTime(newStartTimeMs);
                         changes++;
+                        totalGapMs += gap;
                     }
                 }
             }
@@ -285,7 +287,7 @@
                 `${sub.index}\n${sub.startTime} --> ${sub.endTime}\n${sub.text}`
             ).join('\n\n');
 
-            return { newSrtContent, changes };
+            return { newSrtContent, changes, totalGapMs };
         };
 
         const processFiles = () => {
@@ -298,20 +300,22 @@
             loadedFiles.forEach(file => {
                 const reader = new FileReader();
                 reader.onload = (e) => {
-                    const { newSrtContent, changes } = processSrt(e.target.result, thresholdMs);
-                    createResultCard(file.name, newSrtContent, changes);
+                    const { newSrtContent, changes, totalGapMs } = processSrt(e.target.result, thresholdMs);
+                    createResultCard(file.name, newSrtContent, changes, totalGapMs);
                 };
                 reader.readAsText(file);
             });
         };
 
-        const createResultCard = (fileName, content, changes) => {
+        const createResultCard = (fileName, content, changes, totalGapMs) => {
             const card = document.createElement('div');
             card.className = 'result-card ascii-border p-4 flex flex-col sm:flex-row justify-between items-center space-y-2 sm:space-y-0';
             card.style.backgroundColor = 'var(--card-bg)';
 
+            const avgGap = changes > 0 ? (totalGapMs / changes / 1000).toFixed(2) : 0;
+
             const info = document.createElement('div');
-            info.innerHTML = `<p class="font-bold">${fileName}</p><p class="text-sm">${changes} gap(s) merged.</p>`;
+            info.innerHTML = `<p class="font-bold">${fileName}</p><p class="text-sm">${changes} gap(s) merged.</p><p class="text-sm">Avg. merged gap: ${avgGap}s</p>`;
             
             const downloadBtn = document.createElement('button');
             downloadBtn.textContent = 'DOWNLOAD';
@@ -335,3 +339,4 @@
     </script>
 </body>
 </html>
+
